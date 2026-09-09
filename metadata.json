@@ -1,0 +1,6 @@
+{
+  "name": "Anti-Snooze",
+  "description": "Minimalist offline-first mobile alarm app with forced wake-up challenges (Math Puzzle & Shake Phone) and Expo Go compatibility.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
