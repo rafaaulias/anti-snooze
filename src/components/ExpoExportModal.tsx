@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   const PACKAGE_JSON_CODE = `{
   "name": "anti-snooze-expo",
   "version": "1.0.0",
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -295,19 +295,19 @@ const styles = StyleSheet.create({
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~51.0.0",
-    "expo-status-bar": "~1.12.1",
-    "react": "18.2.0",
-    "react-native": "0.74.1",
-    "expo-sensors": "~13.0.9",
-    "expo-av": "~14.0.5",
-    "expo-notifications": "~0.28.1",
+    "expo": "^52.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.0",
+    "expo-sensors": "~14.0.0",
+    "expo-av": "~15.0.0",
+    "expo-notifications": "~0.29.0",
     "@react-native-async-storage/async-storage": "1.23.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@types/react": "~18.2.45",
-    "typescript": "^5.1.3"
+    "@babel/core": "^7.25.0",
+    "@types/react": "~18.3.12",
+    "typescript": "^5.3.3"
   },
   "private": true
 }`;
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
         {/* Footer Actions */}
         <div className="p-3 bg-[#FFFFFF] border-t border-[#F0F0F0] flex items-center justify-between">
           <span className="text-[11px] text-[#5E5E5E] font-sans">
-            TypeScript • React Native Expo 51+ • Offline-first
+            TypeScript • React Native Expo (SDK 51, 52 & upcoming) • Offline-first
           </span>
           {activeTab !== 'instructions' && (
             <button

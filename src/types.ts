@@ -6,6 +6,12 @@ export type MathDifficulty = 'easy' | 'medium' | 'hard';
 
 export type NavTab = 'alarms' | 'stats' | 'settings';
 
+export interface CustomRingtone {
+  name: string;
+  dataUrl: string; // base64 data url for audio
+  createdAt: number;
+}
+
 export interface Alarm {
   id: string;
   time: string; // "HH:MM" in 24-hour format e.g. "06:30"
@@ -17,6 +23,8 @@ export interface Alarm {
   mathProblemCount: number; // typically 1 to 3
   shakeCountTarget: number; // e.g. 30
   createdAt: number;
+  soundType?: 'digital' | 'siren' | 'radar' | 'custom';
+  volume?: number; // 5 to 100 per-alarm volume level
 }
 
 export interface WakeUpHistoryEntry {
@@ -60,7 +68,9 @@ export interface UserSettings {
   notificationGranted: boolean;
   batteryOptimExemptGranted: boolean;
   volumeEscalation: boolean;
-  soundType: 'digital' | 'siren' | 'radar';
+  volume: number; // 0 to 100
+  soundType: 'digital' | 'siren' | 'radar' | 'custom';
+  customRingtone?: CustomRingtone;
   use24HourFormat: boolean;
   userName?: string;
 }

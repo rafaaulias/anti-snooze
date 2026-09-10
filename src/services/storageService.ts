@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   notificationGranted: true,
   batteryOptimExemptGranted: true,
   volumeEscalation: true,
+  volume: 80,
   soundType: 'radar',
   use24HourFormat: false,
   userName: 'Alex',
@@ -28,6 +29,8 @@ export const INITIAL_ALARMS: Alarm[] = [
     mathDifficulty: 'easy',
     mathProblemCount: 1,
     shakeCountTarget: 30,
+    volume: 85,
+    soundType: 'radar',
     createdAt: Date.now() - 86400000 * 5,
   },
   {
@@ -40,6 +43,8 @@ export const INITIAL_ALARMS: Alarm[] = [
     mathDifficulty: 'medium',
     mathProblemCount: 2,
     shakeCountTarget: 30,
+    volume: 75,
+    soundType: 'radar',
     createdAt: Date.now() - 86400000 * 4,
   },
   {
@@ -52,6 +57,8 @@ export const INITIAL_ALARMS: Alarm[] = [
     mathDifficulty: 'easy',
     mathProblemCount: 1,
     shakeCountTarget: 25,
+    volume: 90,
+    soundType: 'siren',
     createdAt: Date.now() - 86400000 * 3,
   },
   {
@@ -64,6 +71,8 @@ export const INITIAL_ALARMS: Alarm[] = [
     mathDifficulty: 'easy',
     mathProblemCount: 1,
     shakeCountTarget: 30,
+    volume: 70,
+    soundType: 'digital',
     createdAt: Date.now() - 86400000 * 2,
   }
 ];

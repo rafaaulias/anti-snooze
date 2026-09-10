@@ -13,11 +13,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   showAddButton = true,
 }) => {
   return (
-    <header className="sticky top-2 z-40 px-4 w-full select-none">
+    <header className="absolute top-4 sm:top-6 left-4 right-4 z-40 pointer-events-none flex justify-center select-none pt-safe">
       {/* Liquid Glass Floating Navbar Container */}
       <div
         id="floating-navbar"
-        className="h-14 px-4 rounded-[22px] bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] flex items-center justify-between transition-all"
+        className="pointer-events-auto w-full max-w-[335px] h-14 px-4 rounded-[22px] bg-white/75 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] flex items-center justify-between transition-all"
         style={{
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           backdropFilter: 'blur(20px) saturate(180%)',

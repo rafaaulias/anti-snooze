@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alarm, DayOfWeek } from '../types';
-import { Play } from 'lucide-react';
+import { Play, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { hapticService } from '../services/hapticService';
 
@@ -93,10 +93,15 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
             </span>
           </div>
 
-          {/* Subtitle: e.g. "School Time • Shake (30x)" */}
-          <p className="text-[12px] font-medium text-[#7A7A7A] mt-1 truncate">
-            {subTitle}
-          </p>
+          {/* Subtitle: e.g. "School Time • Shake (30x)" and Volume */}
+          <div className="flex items-center space-x-1.5 text-[12px] font-medium text-[#7A7A7A] mt-1 truncate">
+            <span className="truncate">{subTitle}</span>
+            <span className="text-[#CCCCCC]">•</span>
+            <span className="inline-flex items-center space-x-0.5 shrink-0 text-[#666666]">
+              <Volume2 className="w-3 h-3" />
+              <span className="font-mono text-[11px]">{alarm.volume !== undefined ? alarm.volume : 80}%</span>
+            </span>
+          </div>
 
           {/* Bottom Row: Day Chips (M T W T F S S) & Quick Test Button */}
           <div className="flex items-center justify-between mt-3.5 gap-2">

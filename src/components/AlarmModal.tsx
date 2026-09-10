@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Alarm, ChallengeType, DayOfWeek, MathDifficulty } from '../types';
 import { soundService } from '../services/soundService';
-import { X, Check, Calculator, Smartphone, Bell, Vibrate, Trash2, PenLine, Zap, Flame } from 'lucide-react';
+import { X, Check, Calculator, Smartphone, Bell, Vibrate, Trash2, PenLine, Zap, Flame, Volume2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AlarmModalProps {
@@ -10,6 +10,7 @@ interface AlarmModalProps {
   onSave: (alarmData: Omit<Alarm, 'id' | 'createdAt'>, existingId?: string) => void;
   onDelete?: (id: string) => void;
   initialAlarm?: Alarm | null;
+  customRingtone?: { name: string; dataUrl: string } | null;
 }
 
 const REPEAT_DAYS: { key: DayOfWeek; label: string }[] = [
@@ -33,6 +34,7 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
   onSave,
   onDelete,
   initialAlarm,
+  customRingtone,
 }) => {
   // Time states
   const [hour12, setHour12] = useState<number>(6);
@@ -47,7 +49,8 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
   const [shakeCountTarget, setShakeCountTarget] = useState<number>(30);
 
   const [vibrate, setVibrate] = useState(true);
-  const [soundName, setSoundName] = useState<'Radar' | 'Emergency Siren' | 'Digital Clock'>('Radar');
+  const [soundType, setSoundType] = useState<'radar' | 'siren' | 'digital' | 'custom'>('radar');
+  const [volume, setVolume] = useState<number>(80);
 
   // Wheel scroll refs
   const hoursContainerRef = useRef<HTMLDivElement>(null);
@@ -72,6 +75,8 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
       setMathDifficulty(initialAlarm?.mathDifficulty || 'medium');
       setMathProblemCount(initialAlarm?.mathProblemCount || 3);
       setShakeCountTarget(initialAlarm?.shakeCountTarget || 30);
+      setVolume(initialAlarm?.volume !== undefined ? initialAlarm.volume : 80);
+      setSoundType(initialAlarm?.soundType || 'radar');
 
       // Scroll wheels to initial position after render
       setTimeout(() => {
@@ -148,16 +153,50 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
   };
 
   const handleCycleSound = () => {
-    if (soundName === 'Radar') {
-      setSoundName('Emergency Siren');
+    let next: 'radar' | 'siren' | 'digital' | 'custom';
+    if (soundType === 'radar') {
+      next = 'siren';
       soundService.playTone(950, 0.3, 'sawtooth', 0.2);
-    } else if (soundName === 'Emergency Siren') {
-      setSoundName('Digital Clock');
+    } else if (soundType === 'siren') {
+      next = 'digital';
       soundService.playTone(880, 0.3, 'square', 0.2);
+    } else if (soundType === 'digital') {
+      if (customRingtone) {
+        next = 'custom';
+        soundService.playPreview('custom', customRingtone.dataUrl);
+      } else {
+        next = 'radar';
+        soundService.playTone(587, 0.3, 'sine', 0.25);
+      }
     } else {
-      setSoundName('Radar');
+      next = 'radar';
       soundService.playTone(587, 0.3, 'sine', 0.25);
     }
+    setSoundType(next);
+  };
+
+  const getSoundDisplayName = () => {
+    switch (soundType) {
+      case 'radar':
+        return 'Radar Chime';
+      case 'siren':
+        return 'Emergency Siren';
+      case 'digital':
+        return 'Digital Clock';
+      case 'custom':
+        return customRingtone ? customRingtone.name : 'Custom Ringtone';
+      default:
+        return 'Radar Chime';
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVol = parseInt(e.target.value, 10);
+    setVolume(newVol);
+  };
+
+  const handleVolumeMouseUp = () => {
+    soundService.playTone(660, 0.15, 'sine', (volume / 100) * 0.4);
   };
 
   const handleSubmit = () => {
@@ -175,6 +214,8 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
         mathDifficulty,
         mathProblemCount,
         shakeCountTarget,
+        soundType,
+        volume,
       },
       initialAlarm ? initialAlarm.id : undefined
     );
@@ -203,12 +244,18 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
             transition={{ type: 'spring', stiffness: 350, damping: 32 }}
             className="relative w-full sm:max-w-[375px] max-h-[92vh] bg-[#FFFFFF] rounded-t-[32px] sm:rounded-[36px] overflow-hidden flex flex-col shadow-2xl border border-[#EAEAEA]"
           >
-            {/* Header */}
-            <div className="h-16 px-5 border-b border-[#F0F0F0] flex items-center justify-between shrink-0 bg-white z-10">
+            {/* Liquid Glass Header */}
+            <div
+              className="h-16 px-5 border-b border-white/60 flex items-center justify-between shrink-0 bg-white/75 backdrop-blur-2xl z-10 sticky top-0"
+              style={{
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+              }}
+            >
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
-                className="w-10 h-10 rounded-full border border-[#E5E5E5] flex items-center justify-center text-[#000000] hover:bg-black/5 active:bg-black/10 transition-colors"
+                className="w-10 h-10 rounded-full border border-black/10 bg-white/50 flex items-center justify-center text-[#000000] hover:bg-black/5 active:bg-black/10 transition-colors shadow-2xs"
                 title="Cancel"
               >
                 <X className="w-5 h-5 text-[#000000]" />
@@ -542,8 +589,39 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
                 )}
               </div>
 
-              {/* 6. Sound & Vibrate Preferences */}
+              {/* 6. Sound, Volume & Vibrate Preferences */}
               <div className="rounded-[18px] bg-[#F8F8F8] border border-[#EEEEEE] overflow-hidden divide-y divide-[#EEEEEE]">
+                {/* Per-Alarm Volume Slider */}
+                <div className="p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Volume2 className="w-4 h-4 text-[#000000]" />
+                      <span className="font-semibold text-[#000000]">Alarm Volume</span>
+                    </div>
+                    <span className="font-mono font-bold px-2 py-0.5 rounded-full bg-black/5 text-[#000000] text-[11px]">
+                      {volume}%
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3 pt-1">
+                    <span className="text-[11px] font-bold text-[#888888]">5%</span>
+                    <input
+                      type="range"
+                      id="per-alarm-volume-slider"
+                      min="5"
+                      max="100"
+                      step="1"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      onMouseUp={handleVolumeMouseUp}
+                      onTouchEnd={handleVolumeMouseUp}
+                      className="flex-1 h-2 bg-[#E2E2E2] rounded-lg appearance-none cursor-pointer accent-[#1A1A1A]"
+                      aria-label="Alarm Volume Slider"
+                    />
+                    <span className="text-[11px] font-bold text-[#000000]">100%</span>
+                  </div>
+                </div>
+
+                {/* Sound Ringtone Selector */}
                 <div
                   onClick={handleCycleSound}
                   className="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-[#F0F0F0] transition-colors"
@@ -553,7 +631,7 @@ export const AlarmModal: React.FC<AlarmModalProps> = ({
                     <span className="text-sm font-semibold text-[#000000]">Sound</span>
                   </div>
                   <span className="text-xs font-semibold text-[#7A7A7A] flex items-center gap-1">
-                    {soundName} &rsaquo;
+                    {getSoundDisplayName()} &rsaquo;
                   </span>
                 </div>
 

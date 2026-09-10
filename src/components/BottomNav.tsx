@@ -22,11 +22,11 @@ const TABS: TabItem[] = [
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab }) => {
   return (
-    <div className="absolute bottom-4 sm:bottom-6 left-4 right-4 z-40 pointer-events-none flex justify-center select-none">
+    <div className="absolute bottom-4 sm:bottom-6 left-4 right-4 z-40 pointer-events-none flex justify-center select-none pb-safe">
       {/* Liquid Glass Floating Navigation Bar with 3 Evenly Spaced Tabs */}
       <nav
         id="bottom-floating-nav"
-        className="pointer-events-auto w-full max-w-[335px] h-16 p-1.5 rounded-[28px] bg-white/70 backdrop-blur-2xl border border-white/80 shadow-[0_12px_36px_rgba(0,0,0,0.08)] grid grid-cols-3 gap-1 items-center"
+        className="pointer-events-auto w-full max-w-[335px] h-16 p-1.5 rounded-[28px] bg-white/75 backdrop-blur-2xl border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] grid grid-cols-3 gap-1 items-center"
         style={{
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           backdropFilter: 'blur(20px) saturate(180%)',

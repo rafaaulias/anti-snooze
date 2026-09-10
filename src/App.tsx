@@ -13,7 +13,7 @@ import { RingingScreen } from './components/RingingScreen';
 import { ChallengeScreen } from './components/ChallengeScreen';
 import { SuccessScreen } from './components/SuccessScreen';
 import { ExpoExportModal } from './components/ExpoExportModal';
-import { BellOff, Wifi, Battery } from 'lucide-react';
+import { BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -41,9 +41,15 @@ export default function App() {
   } | null>(null);
 
   const lastTriggeredMinuteRef = useRef<string>('');
-  const [currentTimeStr, setCurrentTimeStr] = useState<string>('9:41');
 
-  // Clock status loop
+  // Sync soundService base volume with user settings
+  useEffect(() => {
+    if (settings.volume !== undefined) {
+      soundService.setVolume(settings.volume);
+    }
+  }, [settings.volume]);
+
+  // Clock status loop to trigger scheduled alarms
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -52,9 +58,6 @@ export default function App() {
       const hh = h.toString().padStart(2, '0');
       const mm = m.toString().padStart(2, '0');
       const currentMinuteStr = `${hh}:${mm}`;
-
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      setCurrentTimeStr(`${h12}:${mm}`);
 
       if (currentScreen === 'home' && lastTriggeredMinuteRef.current !== currentMinuteStr) {
         const daysMap: Record<number, string> = {
@@ -88,7 +91,14 @@ export default function App() {
   const triggerAlarm = (alarm: Alarm) => {
     setRingingAlarm(alarm);
     setCurrentScreen('ringing');
-    soundService.startAlarm();
+    const effectiveSoundType = alarm.soundType || settings.soundType || 'radar';
+    const effectiveVolume = alarm.volume !== undefined ? alarm.volume : (settings.volume ?? 80);
+    soundService.startAlarm({
+      soundType: effectiveSoundType,
+      customDataUrl: settings.customRingtone?.dataUrl,
+      volume: effectiveVolume,
+      volumeEscalation: settings.volumeEscalation,
+    });
   };
 
   // Quick Test Action
@@ -233,25 +243,12 @@ export default function App() {
   const nextCountdownStr = getNextAlarmCountdown();
 
   return (
-    <div className="min-h-screen bg-[#111111] sm:bg-[#EAEAEA] flex flex-col items-center justify-center p-0 sm:p-4 text-[#000000] font-sans antialiased select-none">
-      {/* Mobile Device Frame (375x812 native iPhone dimensions on desktop, 100% full screen on mobile) */}
+    <div className="h-screen h-[100dvh] w-full bg-[#FFFFFF] sm:bg-[#EAEAEA] flex flex-col items-center justify-center p-0 sm:p-4 text-[#000000] font-sans antialiased select-none overflow-hidden">
+      {/* Mobile App Container: 100% full screen on mobile (100dvh), framed on larger desktop screens */}
       <div
         id="app-container"
-        className="w-full h-screen sm:h-[812px] sm:w-[375px] bg-[#FFFFFF] relative overflow-hidden flex flex-col sm:rounded-[46px] sm:border-[10px] sm:border-[#000000] sm:shadow-2xl"
+        className="w-full h-full sm:h-[812px] sm:max-h-[100dvh] sm:w-[375px] bg-[#FFFFFF] relative overflow-hidden flex flex-col sm:rounded-[44px] sm:border-[8px] sm:border-[#000000] sm:shadow-2xl"
       >
-        {/* iOS Status Bar & Dynamic Island */}
-        <div className="h-11 px-7 bg-[#FFFFFF] flex items-center justify-between text-[12px] font-bold text-[#000000] select-none shrink-0 border-b border-[#F5F5F5] z-30">
-          <span>{currentTimeStr}</span>
-          {/* Dynamic Island Speaker Pill */}
-          <div className="w-24 h-5 bg-[#000000] rounded-full flex items-center justify-end pr-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#1A1A1A]" />
-          </div>
-          <div className="flex items-center space-x-1.5 text-[#000000]">
-            <Wifi className="w-3.5 h-3.5" />
-            <Battery className="w-4 h-4" />
-          </div>
-        </div>
-
         {/* Sticky Floating Liquid Glass Navbar */}
         <Navbar
           onAddAlarm={() => {
@@ -261,8 +258,8 @@ export default function App() {
           showAddButton={currentTab === 'alarms'}
         />
 
-        {/* Scrollable Main Viewport (padding-top allows header breathing room; padding-bottom keeps items clear of floating bottom nav) */}
-        <main className="flex-1 overflow-y-auto px-5 pt-2 pb-28 bg-[#FFFFFF] no-scrollbar">
+        {/* Scrollable Main Viewport (pt-22 gives ample space under floating header; pb-28 keeps items clear of floating bottom nav) */}
+        <main className="flex-1 overflow-y-auto px-5 pt-22 sm:pt-24 pb-28 bg-[#FFFFFF] no-scrollbar">
           {/* 1. Alarms Tab */}
           {currentTab === 'alarms' && (
             <div className="space-y-5 pb-8">
@@ -382,6 +379,7 @@ export default function App() {
           onSave={handleSaveAlarm}
           onDelete={handleDeleteAlarm}
           initialAlarm={editingAlarm}
+          customRingtone={settings.customRingtone || null}
         />
 
         {/* Onboarding Permission Sheet */}
