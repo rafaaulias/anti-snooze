@@ -73,6 +73,8 @@ export interface UserSettings {
   customRingtone?: CustomRingtone;
   use24HourFormat: boolean;
   userName?: string;
+  language?: 'en' | 'id';
+  keepScreenAwake?: boolean;
 }
 
 export interface MathProblem {

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { CheckCircle2, Flame, ArrowRight, Clock, Award } from 'lucide-react';
 import { hapticService } from '../services/hapticService';
+import { AppLanguage, t } from '../services/i18n';
 
 interface SuccessScreenProps {
   timeDismissed: string;
@@ -9,6 +10,7 @@ interface SuccessScreenProps {
   challengeType: 'math' | 'shake';
   alarmLabel: string;
   onDone: () => void;
+  language?: AppLanguage;
 }
 
 export const SuccessScreen: React.FC<SuccessScreenProps> = ({
@@ -18,6 +20,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
   challengeType,
   alarmLabel,
   onDone,
+  language = 'en',
 }) => {
   useEffect(() => {
     hapticService.dismissSuccess();
@@ -27,14 +30,15 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
     hapticService.medium();
     onDone();
   };
+
   return (
-    <div 
+    <div
       id="screen-success"
       className="fixed inset-0 z-50 bg-[#FFFFFF] text-[#000000] flex flex-col justify-between p-6 select-none"
     >
       <div className="w-full pt-4 flex justify-center">
         <div className="px-3 py-1 rounded-full bg-[#F9F9F9] border border-[#E5E5E5] text-xs font-semibold text-[#5E5E5E]">
-          {alarmLabel || 'Alarm Dismissed'}
+          {alarmLabel || t('alarmDismissed', language)}
         </div>
       </div>
 
@@ -46,27 +50,26 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
         </div>
 
         <h1 className="text-3xl font-black tracking-tight text-[#000000]">
-          Alarm dismissed
+          {t('alarmDismissed', language)}
         </h1>
 
         <p className="text-sm font-semibold text-[#5E5E5E] mt-2 flex items-center justify-center space-x-1">
           <Clock className="w-4 h-4 text-[#5E5E5E]" />
-          <span>Dismissed at {timeDismissed}</span>
+          <span>{t('dismissedAt', language, { time: timeDismissed })}</span>
         </p>
 
         {/* Streak Counter Pill (#FF7B00 reserved exclusively for the active-streak flame) */}
         <div className="mt-6 w-full p-4 rounded-[16px] bg-[#F9F9F9] border border-[#E5E5E5] flex items-center justify-between shadow-xs">
           <div className="flex items-center space-x-3 text-left">
             <div className="w-10 h-10 rounded-full bg-[#FFFFFF] border border-[#E5E5E5] flex items-center justify-center shadow-xs">
-              {/* Active-streak flame color token #FF7B00 */}
               <Flame className="w-6 h-6 text-[#FF7B00] fill-[#FF7B00]" />
             </div>
             <div>
               <span className="text-xs font-bold text-[#000000] block">
-                {streak} Day Streak
+                {t('dayStreak', language, { count: streak })}
               </span>
               <span className="text-[11px] text-[#5E5E5E]">
-                You defeated snooze again!
+                {language === 'id' ? 'Kamu berhasil bangun tanpa tunda!' : 'You defeated snooze again!'}
               </span>
             </div>
           </div>
@@ -79,7 +82,7 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
         <div className="mt-3 w-full grid grid-cols-2 gap-2 text-left">
           <div className="p-3 rounded-[12px] bg-[#F9F9F9] border border-[#EBEBEB]">
             <span className="text-[10px] font-bold text-[#5E5E5E] uppercase tracking-wider block">
-              Time to Wake
+              {t('avgWakeTime', language)}
             </span>
             <span className="text-base font-extrabold font-mono text-[#000000]">
               {durationSeconds}s
@@ -87,10 +90,10 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
           </div>
           <div className="p-3 rounded-[12px] bg-[#F9F9F9] border border-[#EBEBEB]">
             <span className="text-[10px] font-bold text-[#5E5E5E] uppercase tracking-wider block">
-              Challenge
+              {t('wakeUpChallenge', language)}
             </span>
             <span className="text-sm font-bold text-[#000000] capitalize">
-              {challengeType === 'math' ? 'Math Solved' : 'Phone Shaken'}
+              {challengeType === 'math' ? t('mathPuzzle', language) : t('shakePhone', language)}
             </span>
           </div>
         </div>
@@ -101,9 +104,9 @@ export const SuccessScreen: React.FC<SuccessScreenProps> = ({
         <button
           onClick={handleDoneClick}
           id="btn-dismiss-done"
-          className="w-full h-14 rounded-[16px] bg-[#000000] text-white font-extrabold text-base tracking-wide flex items-center justify-center space-x-2 hover:bg-[#222222] active:scale-[0.98] transition-all shadow-md"
+          className="w-full h-14 rounded-[16px] bg-[#000000] text-white font-extrabold text-base tracking-wide flex items-center justify-center space-x-2 hover:bg-[#222222] active:scale-[0.98] transition-all shadow-md cursor-pointer"
         >
-          <span>Done</span>
+          <span>{t('done', language)}</span>
           <ArrowRight className="w-4 h-4 text-white" />
         </button>
       </div>

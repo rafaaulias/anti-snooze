@@ -3,6 +3,7 @@ import { Alarm, DayOfWeek } from '../types';
 import { Play, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { hapticService } from '../services/hapticService';
+import { AppLanguage, formatTimeString, t } from '../services/i18n';
 
 interface AlarmCardProps {
   alarm: Alarm;
@@ -10,17 +11,18 @@ interface AlarmCardProps {
   onEdit: (alarm: Alarm) => void;
   onDelete: (id: string) => void;
   onTestThisAlarm: (alarm: Alarm) => void;
+  use24HourFormat?: boolean;
+  language?: AppLanguage;
 }
 
-// In Home.png, the 7 day chips are displayed as M T W T F S S
-const DAYS_ORDER: { key: DayOfWeek; label: string }[] = [
-  { key: 'mon', label: 'M' },
-  { key: 'tue', label: 'T' },
-  { key: 'wed', label: 'W' },
-  { key: 'thu', label: 'T' },
-  { key: 'fri', label: 'F' },
-  { key: 'sat', label: 'S' },
-  { key: 'sun', label: 'S' },
+const DAYS_KEYS: { key: DayOfWeek; i18nKey: 'daysMon' | 'daysTue' | 'daysWed' | 'daysThu' | 'daysFri' | 'daysSat' | 'daysSun' }[] = [
+  { key: 'mon', i18nKey: 'daysMon' },
+  { key: 'tue', i18nKey: 'daysTue' },
+  { key: 'wed', i18nKey: 'daysWed' },
+  { key: 'thu', i18nKey: 'daysThu' },
+  { key: 'fri', i18nKey: 'daysFri' },
+  { key: 'sat', i18nKey: 'daysSat' },
+  { key: 'sun', i18nKey: 'daysSun' },
 ];
 
 export const AlarmCard: React.FC<AlarmCardProps> = ({
@@ -28,19 +30,16 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
   onToggle,
   onEdit,
   onTestThisAlarm,
+  use24HourFormat = false,
+  language = 'en',
 }) => {
-  // Format 24h to 12h display
-  const [hoursStr, minutesStr] = alarm.time.split(':');
-  const hoursNum = parseInt(hoursStr, 10);
-  const period = hoursNum >= 12 ? 'PM' : 'AM';
-  const displayHours = hoursNum % 12 === 0 ? 12 : hoursNum % 12;
-  const displayTime = `${displayHours.toString().padStart(2, '0')}:${minutesStr}`;
+  const { timeFormatted, period } = formatTimeString(alarm.time, use24HourFormat);
 
   const challengeLabel =
     alarm.challengeType === 'math'
-      ? `Math (${alarm.mathDifficulty || 'med'})`
-      : `Shake (${alarm.shakeCountTarget || 30}x)`;
-  const subTitle = `${alarm.label || 'Alarm'} • ${challengeLabel}`;
+      ? `${t('mathPuzzle', language)} (${alarm.mathDifficulty || 'med'})`
+      : `${t('shakePhone', language)} (${alarm.shakeCountTarget || 30}x)`;
+  const subTitle = `${alarm.label || t('alarms', language)} • ${challengeLabel}`;
 
   const handleToggleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,90 +85,91 @@ export const AlarmCard: React.FC<AlarmCardProps> = ({
               animate={{ color: alarm.enabled ? '#000000' : '#444444' }}
               className="text-[34px] sm:text-[38px] font-extrabold tracking-tight leading-none"
             >
-              {displayTime}
+              {timeFormatted}
             </motion.span>
-            <span className="text-[12px] font-bold text-[#7A7A7A] tracking-tight">
-              {period}
-            </span>
+            {period && (
+              <span className="text-[12px] font-bold text-[#7A7A7A] tracking-tight">
+                {period}
+              </span>
+            )}
           </div>
 
-          {/* Subtitle: e.g. "School Time • Shake (30x)" and Volume */}
+          {/* Subtitle: e.g. "Morning Alarm • Shake (30x)" and Volume */}
           <div className="flex items-center space-x-1.5 text-[12px] font-medium text-[#7A7A7A] mt-1 truncate">
             <span className="truncate">{subTitle}</span>
             <span className="text-[#CCCCCC]">•</span>
             <span className="inline-flex items-center space-x-0.5 shrink-0 text-[#666666]">
-              <Volume2 className="w-3 h-3" />
-              <span className="font-mono text-[11px]">{alarm.volume !== undefined ? alarm.volume : 80}%</span>
+              <Volume2 className="w-3 h-3 text-[#777777]" />
+              <span className="text-[11px] font-mono font-bold text-[#555555]">
+                {alarm.volume ?? 80}%
+              </span>
             </span>
           </div>
-
-          {/* Bottom Row: Day Chips (M T W T F S S) & Quick Test Button */}
-          <div className="flex items-center justify-between mt-3.5 gap-2">
-            <div className="flex items-center space-x-1">
-              {DAYS_ORDER.map(({ key, label }, idx) => {
-                const isActive = alarm.days.includes(key);
-                return (
-                  <motion.span
-                    key={`${alarm.id}-${key}-${idx}`}
-                    animate={{
-                      backgroundColor: isActive
-                        ? alarm.enabled
-                          ? '#1A1A1A'
-                          : '#555555'
-                        : '#ECECEC',
-                      color: isActive ? '#FFFFFF' : '#9A9A9A',
-                    }}
-                    transition={{ duration: 0.2 }}
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                  >
-                    {label}
-                  </motion.span>
-                );
-              })}
-            </div>
-
-            {/* Test Alarm Button in each alarm card */}
-            <motion.button
-              type="button"
-              id={`btn-test-alarm-${alarm.id}`}
-              whileTap={{ scale: 0.9 }}
-              whileHover={{ scale: 1.04 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                hapticService.light();
-                onTestThisAlarm(alarm);
-              }}
-              className="h-6 px-2 rounded-full bg-[#F3F3F3] hover:bg-[#EBEBEB] active:bg-[#E0E0E0] text-[#000000] text-[10px] font-semibold flex items-center space-x-1 transition-colors border border-[#E5E5E5]/60 shadow-2xs shrink-0"
-              title="Test this alarm ring and challenge"
-            >
-              <Play className="w-2.5 h-2.5 fill-[#000000] text-[#000000]" />
-              <span>Test</span>
-            </motion.button>
-          </div>
         </div>
 
-        {/* Right: iOS Style Switch with Smooth Animation and Zero Overflow */}
-        <div className="pt-0.5 shrink-0">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={alarm.enabled}
-            id={`toggle-alarm-${alarm.id}`}
-            onClick={handleToggleClick}
-            className={`relative w-12 h-7 rounded-full transition-colors duration-250 focus:outline-none p-[2px] block shrink-0 ${
-              alarm.enabled ? 'bg-[#1A1A1A]' : 'bg-[#E5E5E5]'
+        {/* Right: iOS-Style Smooth Toggle Switch */}
+        <button
+          type="button"
+          role="switch"
+          id={`toggle-alarm-${alarm.id}`}
+          aria-checked={alarm.enabled}
+          onClick={handleToggleClick}
+          className={`relative w-[50px] h-[30px] rounded-full p-[2px] transition-colors duration-200 focus:outline-none shrink-0 self-center cursor-pointer ${
+            alarm.enabled ? 'bg-[#000000]' : 'bg-[#E5E5E5]'
+          }`}
+        >
+          <motion.div
+            layout
+            transition={{
+              type: 'spring',
+              stiffness: 500,
+              damping: 32,
+            }}
+            className={`w-[26px] h-[26px] rounded-full bg-white shadow-xs ${
+              alarm.enabled ? 'ml-auto' : 'mr-auto'
             }`}
-          >
-            <motion.div
-              layout
-              transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-              className={`w-6 h-6 rounded-full bg-white shadow-sm ${
-                alarm.enabled ? 'ml-auto' : 'mr-auto'
-              }`}
-            />
-          </button>
+          />
+        </button>
+      </div>
+
+      {/* Bottom Row: Day-chips and Quick Test Button */}
+      <div className="flex items-center justify-between mt-3.5 pt-3 border-t border-[#F2F2F2]">
+        {/* 7 Day Chips (M T W T F S S) */}
+        <div className="flex items-center space-x-1 sm:space-x-1.5">
+          {DAYS_KEYS.map(({ key, i18nKey }) => {
+            const isDayActive = alarm.days.includes(key);
+            const dayLabel = t(i18nKey, language);
+            return (
+              <div
+                key={key}
+                className={`w-[23px] h-[23px] sm:w-[25px] sm:h-[25px] rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${
+                  isDayActive
+                    ? alarm.enabled
+                      ? 'bg-[#000000] text-white shadow-2xs'
+                      : 'bg-[#555555] text-white'
+                    : 'bg-[#F2F2F2] text-[#888888]'
+                }`}
+              >
+                {dayLabel}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Quick Test Alarm button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            hapticService.selection();
+            onTestThisAlarm(alarm);
+          }}
+          className="text-[11px] font-bold text-[#666666] hover:text-[#000000] active:scale-95 px-2.5 py-1 rounded-[10px] bg-[#F5F5F5] hover:bg-[#EAEAEA] transition-all flex items-center space-x-1 cursor-pointer"
+          title="Test this alarm with its volume and challenge"
+        >
+          <Play className="w-3 h-3 fill-current" />
+          <span>{t('test', language)}</span>
+        </button>
       </div>
     </motion.div>
   );

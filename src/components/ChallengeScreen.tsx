@@ -5,15 +5,18 @@ import { soundService } from '../services/soundService';
 import { motionService } from '../services/motionService';
 import { hapticService } from '../services/hapticService';
 import { Calculator, Smartphone, Delete, RotateCcw, Zap } from 'lucide-react';
+import { AppLanguage, t } from '../services/i18n';
 
 interface ChallengeScreenProps {
   alarm: Alarm;
   onSuccess: (durationSeconds: number) => void;
+  language?: AppLanguage;
 }
 
 export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
   alarm,
   onSuccess,
+  language = 'en',
 }) => {
   const startTimeRef = useRef<number>(Date.now());
 
@@ -151,7 +154,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
   }, [alarm.challengeType, userAnswer, currentProblem, problemIndex]);
 
   return (
-    <div 
+    <div
       id="screen-challenge"
       className="fixed inset-0 z-50 bg-[#FFFFFF] text-[#000000] flex flex-col justify-between p-5 select-none"
     >
@@ -164,13 +167,13 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
             <Smartphone className="w-5 h-5 text-[#000000]" />
           )}
           <h2 className="text-sm font-bold uppercase tracking-wider text-[#000000]">
-            {alarm.challengeType === 'math' ? 'Math Challenge' : 'Shake Challenge'}
+            {alarm.challengeType === 'math' ? t('mathPuzzle', language) : t('shakePhone', language)}
           </h2>
         </div>
         <div className="px-3 py-1 rounded-full bg-[#F9F9F9] border border-[#E5E5E5] text-xs font-bold font-mono">
           {alarm.challengeType === 'math'
-            ? `Problem ${problemIndex + 1} of ${totalProblems}`
-            : `${shakeCount} / ${targetShakes}`}
+            ? t('problemCounter', language, { current: problemIndex + 1, total: totalProblems })
+            : t('shakeProgress', language, { current: shakeCount, target: targetShakes })}
         </div>
       </div>
 
@@ -182,7 +185,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
             {/* Math Question Display */}
             <div className="text-center mb-6">
               <span className="text-xs font-bold text-[#5E5E5E] tracking-wider uppercase mb-1 block">
-                Calculate & Enter Answer
+                {t('solveToDismiss', language)}
               </span>
               <div className="text-5xl font-black tracking-tight text-[#000000] font-mono py-2">
                 {currentProblem.question}
@@ -190,7 +193,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
             </div>
 
             {/* Answer Box */}
-            <div 
+            <div
               className={`w-full h-14 rounded-[12px] flex items-center justify-center border-2 transition-all font-mono text-3xl font-extrabold ${
                 isMathError
                   ? 'border-red-500 bg-red-50 text-red-600 animate-shake'
@@ -202,8 +205,8 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
               {userAnswer ? (
                 <span>{userAnswer}</span>
               ) : (
-                <span className="text-base font-sans font-medium text-[#8E8E8E]">
-                  {isMathError ? 'Wrong answer! Try again' : 'Tap digits below...'}
+                <span className="text-sm font-sans font-medium text-[#8E8E8E]">
+                  {isMathError ? t('incorrectTryAgain', language) : '...'}
                 </span>
               )}
             </div>
@@ -214,7 +217,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
                 <button
                   key={digit}
                   onClick={() => handleDigitPress(digit)}
-                  className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:bg-[#000000] active:text-white border border-[#E5E5E5] text-xl font-bold font-mono transition-all flex items-center justify-center shadow-xs"
+                  className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:bg-[#000000] active:text-white border border-[#E5E5E5] text-xl font-bold font-mono transition-all flex items-center justify-center shadow-xs cursor-pointer"
                 >
                   {digit}
                 </button>
@@ -223,16 +226,16 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
               {/* Clear */}
               <button
                 onClick={handleClearPress}
-                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:scale-95 border border-[#E5E5E5] text-xs font-bold tracking-wider uppercase text-[#5E5E5E] transition-all flex items-center justify-center"
+                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:scale-95 border border-[#E5E5E5] text-xs font-bold tracking-wider uppercase text-[#5E5E5E] transition-all flex items-center justify-center cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4 mr-1" />
-                Clear
+                C
               </button>
 
               {/* 0 */}
               <button
                 onClick={() => handleDigitPress('0')}
-                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:bg-[#000000] active:text-white border border-[#E5E5E5] text-xl font-bold font-mono transition-all flex items-center justify-center shadow-xs"
+                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:bg-[#000000] active:text-white border border-[#E5E5E5] text-xl font-bold font-mono transition-all flex items-center justify-center shadow-xs cursor-pointer"
               >
                 0
               </button>
@@ -240,7 +243,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
               {/* Backspace */}
               <button
                 onClick={handleDeletePress}
-                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:scale-95 border border-[#E5E5E5] text-[#5E5E5E] transition-all flex items-center justify-center"
+                className="h-13 rounded-[12px] bg-[#F9F9F9] hover:bg-[#EBEBEB] active:scale-95 border border-[#E5E5E5] text-[#5E5E5E] transition-all flex items-center justify-center cursor-pointer"
               >
                 <Delete className="w-5 h-5" />
               </button>
@@ -251,13 +254,13 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
               onClick={handleMathSubmit}
               disabled={!userAnswer}
               id="btn-submit-math"
-              className={`w-full h-13 mt-4 rounded-[12px] font-bold text-sm tracking-wide transition-all shadow-md ${
+              className={`w-full h-13 mt-4 rounded-[12px] font-bold text-sm tracking-wide transition-all shadow-md cursor-pointer ${
                 userAnswer
                   ? 'bg-[#000000] text-white hover:bg-[#222222] active:scale-[0.98]'
                   : 'bg-[#E5E5E5] text-[#8E8E8E] cursor-not-allowed'
               }`}
             >
-              Submit Answer
+              {t('submit', language)}
             </button>
           </div>
         ) : (
@@ -294,7 +297,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
               </svg>
 
               {/* Center Shake Count & Animated Device */}
-              <div 
+              <div
                 className={`absolute flex flex-col items-center justify-center transition-transform ${
                   isShakingAnim ? 'scale-110 rotate-6' : 'scale-100'
                 }`}
@@ -304,32 +307,29 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
                   {Math.round((shakeCount / targetShakes) * 100)}%
                 </span>
                 <span className="text-[11px] font-semibold text-[#5E5E5E]">
-                  {shakeCount} of {targetShakes}
+                  {shakeCount} / {targetShakes}
                 </span>
               </div>
             </div>
 
             {/* Instruction */}
             <h3 className="text-xl font-extrabold text-[#000000] mt-3">
-              Shake to unlock
+              {t('shakeToUnlock', language)}
             </h3>
             <p className="text-xs text-[#5E5E5E] max-w-xs mt-1 leading-relaxed">
-              Physically shake your mobile phone back and forth until the progress ring reaches 100%.
+              {t('keepShaking', language)}
             </p>
 
-            {/* Interactive Shake Trigger (Works on touch / mouse click or spacebar) */}
+            {/* Interactive Shake Trigger */}
             <div className="mt-8 w-full space-y-2">
               <button
                 onClick={handleManualShake}
                 id="btn-manual-shake"
-                className="w-full h-14 rounded-[16px] bg-[#000000] text-white font-extrabold text-sm tracking-wide flex items-center justify-center space-x-2 hover:bg-[#222222] active:scale-95 transition-all shadow-md"
+                className="w-full h-14 rounded-[16px] bg-[#000000] text-white font-extrabold text-sm tracking-wide flex items-center justify-center space-x-2 hover:bg-[#222222] active:scale-95 transition-all shadow-md cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-white" />
-                <span>Tap or Shake Device</span>
+                <span>{t('shakePhone', language)} (Tap / Shake)</span>
               </button>
-              <p className="text-[11px] text-[#5E5E5E] font-medium">
-                Hardware accelerometer active • Spacebar / Tap also supported
-              </p>
             </div>
           </div>
         )}
@@ -338,7 +338,7 @@ export const ChallengeScreen: React.FC<ChallengeScreenProps> = ({
       {/* Subtle Bottom Note */}
       <div className="py-2 text-center border-t border-[#F0F0F0]">
         <span className="text-[11px] font-semibold text-[#8E8E8E]">
-          Snooze is disabled. Complete challenge to dismiss.
+          {t('solveToDismiss', language)}
         </span>
       </div>
     </div>

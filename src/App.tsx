@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Alarm, UserSettings, NavTab, WakeUpStats } from './types';
 import { storageService } from './services/storageService';
 import { soundService } from './services/soundService';
+import { backgroundService } from './services/backgroundService';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
 import { AlarmCard } from './components/AlarmCard';
@@ -15,6 +16,7 @@ import { SuccessScreen } from './components/SuccessScreen';
 import { ExpoExportModal } from './components/ExpoExportModal';
 import { BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { t } from './services/i18n';
 
 export default function App() {
   const [alarms, setAlarms] = useState<Alarm[]>(() => storageService.getAlarms());
@@ -42,6 +44,8 @@ export default function App() {
 
   const lastTriggeredMinuteRef = useRef<string>('');
 
+  const lang = settings.language || 'en';
+
   // Sync soundService base volume with user settings
   useEffect(() => {
     if (settings.volume !== undefined) {
@@ -49,7 +53,12 @@ export default function App() {
     }
   }, [settings.volume]);
 
-  // Clock status loop to trigger scheduled alarms
+  // Synchronize Screen Wake Lock based on user settings
+  useEffect(() => {
+    backgroundService.setKeepAwake(settings.keepScreenAwake !== false);
+  }, [settings.keepScreenAwake]);
+
+  // Clock status loop to trigger scheduled alarms with Web Worker unthrottled ticker
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -83,6 +92,7 @@ export default function App() {
     };
 
     updateTime();
+    backgroundService.registerTick(updateTime);
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [alarms, currentScreen]);
@@ -99,6 +109,13 @@ export default function App() {
       volume: effectiveVolume,
       volumeEscalation: settings.volumeEscalation,
     });
+
+    // If tab is in background or minimized, trigger rich notification and title flash
+    if (document.hidden) {
+      backgroundService.sendAlarmNotification(alarm.label, () => {
+        window.focus();
+      });
+    }
   };
 
   // Quick Test Action
@@ -106,7 +123,7 @@ export default function App() {
     const target = alarms[0] || {
       id: 'test-alarm',
       time: '06:30',
-      label: 'School Time',
+      label: lang === 'id' ? 'Alarm Pagi' : 'Morning Alarm',
       days: ['mon', 'tue', 'wed', 'thu', 'fri'],
       enabled: true,
       challengeType: 'math',
@@ -162,9 +179,10 @@ export default function App() {
   };
 
   // Onboarding Complete
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (nickname: string) => {
     const newSettings: UserSettings = {
       ...settings,
+      userName: nickname || settings.userName || '',
       onboardingCompleted: true,
       exactAlarmGranted: true,
       notificationGranted: true,
@@ -180,6 +198,17 @@ export default function App() {
     const updated = { ...settings, ...newPartial };
     setSettings(updated);
     storageService.saveSettings(updated);
+  };
+
+  // Reset all data
+  const handleResetAllData = () => {
+    storageService.resetAllData();
+    setAlarms([]);
+    const freshSettings = storageService.getSettings();
+    setSettings(freshSettings);
+    setStats(storageService.getStats());
+    setIsOnboardingOpen(true);
+    setCurrentTab('alarms');
   };
 
   // Start Challenge from Ringing Screen
@@ -209,12 +238,13 @@ export default function App() {
 
   // Finish Success Screen
   const handleSuccessDone = () => {
+    backgroundService.stopTitleFlashing();
     setRingingAlarm(null);
     setCurrentScreen('home');
     setSuccessInfo(null);
   };
 
-  // Compute countdown to next active alarm matching Home.png "Next: 6h 30m"
+  // Compute countdown to next active alarm
   const getNextAlarmCountdown = (): string => {
     const activeList = alarms.filter((a) => a.enabled);
     if (activeList.length === 0) return '';
@@ -235,7 +265,10 @@ export default function App() {
     if (minDiff === Infinity) return '';
     const hours = Math.floor(minDiff / 60);
     const mins = minDiff % 60;
-    return `Next: ${hours}h ${mins}m`;
+    const prefix = lang === 'id' ? 'Berikutnya' : 'Next';
+    const hUnit = lang === 'id' ? 'j' : 'h';
+    const mUnit = lang === 'id' ? 'm' : 'm';
+    return `${prefix}: ${hours}${hUnit} ${mins}${mUnit}`;
   };
 
   const activeAlarms = alarms.filter((a) => a.enabled);
@@ -244,7 +277,7 @@ export default function App() {
 
   return (
     <div className="h-screen h-[100dvh] w-full bg-[#FFFFFF] sm:bg-[#EAEAEA] flex flex-col items-center justify-center p-0 sm:p-4 text-[#000000] font-sans antialiased select-none overflow-hidden">
-      {/* Mobile App Container: 100% full screen on mobile (100dvh), framed on larger desktop screens */}
+      {/* Mobile App Container: 100% full viewport height on mobile devices, framed on larger desktop screens */}
       <div
         id="app-container"
         className="w-full h-full sm:h-[812px] sm:max-h-[100dvh] sm:w-[375px] bg-[#FFFFFF] relative overflow-hidden flex flex-col sm:rounded-[44px] sm:border-[8px] sm:border-[#000000] sm:shadow-2xl"
@@ -258,7 +291,7 @@ export default function App() {
           showAddButton={currentTab === 'alarms'}
         />
 
-        {/* Scrollable Main Viewport (pt-22 gives ample space under floating header; pb-28 keeps items clear of floating bottom nav) */}
+        {/* Scrollable Main Viewport */}
         <main className="flex-1 overflow-y-auto px-5 pt-22 sm:pt-24 pb-28 bg-[#FFFFFF] no-scrollbar">
           {/* 1. Alarms Tab */}
           {currentTab === 'alarms' && (
@@ -266,7 +299,7 @@ export default function App() {
               {/* Active Header */}
               <div className="flex items-center justify-between pt-1 px-1">
                 <span className="text-[13px] font-bold text-[#666666]">
-                  Active
+                  {t('active', lang)}
                 </span>
                 {nextCountdownStr && (
                   <span className="text-[12px] font-medium text-[#8E8E8E]">
@@ -287,6 +320,8 @@ export default function App() {
                         onEdit={handleEditAlarm}
                         onDelete={handleDeleteAlarm}
                         onTestThisAlarm={triggerAlarm}
+                        use24HourFormat={settings.use24HourFormat}
+                        language={lang}
                       />
                     ))
                   ) : (
@@ -297,7 +332,9 @@ export default function App() {
                       exit={{ opacity: 0 }}
                       className="py-6 text-center text-[#8E8E8E] text-xs bg-[#FAFAFA] rounded-[20px] border border-[#F0F0F0]"
                     >
-                      No active alarms. Tap + above to create or toggle an alarm on.
+                      {lang === 'id'
+                        ? 'Tidak ada alarm aktif. Tekan + di atas untuk menambah atau aktifkan alarm.'
+                        : 'No active alarms. Tap + above to create or toggle an alarm on.'}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -308,7 +345,7 @@ export default function App() {
                 <div className="space-y-3 pt-3">
                   <div className="px-1">
                     <span className="text-[13px] font-bold text-[#8E8E8E]">
-                      Inactive
+                      {t('inactive', lang)}
                     </span>
                   </div>
 
@@ -322,6 +359,8 @@ export default function App() {
                           onEdit={handleEditAlarm}
                           onDelete={handleDeleteAlarm}
                           onTestThisAlarm={triggerAlarm}
+                          use24HourFormat={settings.use24HourFormat}
+                          language={lang}
                         />
                       ))}
                     </AnimatePresence>
@@ -336,10 +375,10 @@ export default function App() {
                     <BellOff className="w-8 h-8" />
                   </div>
                   <h3 className="text-base font-bold text-[#000000]">
-                    No alarms scheduled
+                    {t('noAlarmsScheduled', lang)}
                   </h3>
                   <p className="text-xs text-[#5E5E5E] max-w-[220px] mt-1">
-                    Tap the + button in the header to create your first anti-snooze alarm.
+                    {t('noAlarmsDesc', lang)}
                   </p>
                 </div>
               )}
@@ -362,6 +401,7 @@ export default function App() {
               onUpdateSettings={handleUpdateSettings}
               onQuickTestAlarm={handleQuickTest}
               onOpenExpoExport={() => setIsExpoExportOpen(true)}
+              onResetAllData={handleResetAllData}
             />
           )}
         </main>
@@ -370,9 +410,10 @@ export default function App() {
         <BottomNav
           currentTab={currentTab}
           onSelectTab={(tab) => setCurrentTab(tab)}
+          language={lang}
         />
 
-        {/* Add/Edit Alarm Modal with Spring Enter/Exit Animation & Snapped Time Wheel */}
+        {/* Add/Edit Alarm Modal */}
         <AlarmModal
           isOpen={isAlarmModalOpen}
           onClose={() => setIsAlarmModalOpen(false)}
@@ -380,12 +421,16 @@ export default function App() {
           onDelete={handleDeleteAlarm}
           initialAlarm={editingAlarm}
           customRingtone={settings.customRingtone || null}
+          use24HourFormat={settings.use24HourFormat}
+          language={lang}
         />
 
         {/* Onboarding Permission Sheet */}
         <OnboardingModal
           isOpen={isOnboardingOpen}
           onComplete={handleOnboardingComplete}
+          language={lang}
+          initialName={settings.userName}
         />
 
         {/* React Native Expo Export Modal */}
@@ -399,6 +444,8 @@ export default function App() {
           <RingingScreen
             alarm={ringingAlarm}
             onStartChallenge={handleStartChallenge}
+            use24HourFormat={settings.use24HourFormat}
+            language={lang}
           />
         )}
 
@@ -407,6 +454,7 @@ export default function App() {
           <ChallengeScreen
             alarm={ringingAlarm}
             onSuccess={handleChallengeSuccess}
+            language={lang}
           />
         )}
 
@@ -419,6 +467,7 @@ export default function App() {
             challengeType={successInfo.challengeType}
             alarmLabel={successInfo.alarmLabel}
             onDone={handleSuccessDone}
+            language={lang}
           />
         )}
       </div>

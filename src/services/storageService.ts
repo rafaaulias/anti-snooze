@@ -3,96 +3,74 @@ import { Alarm, UserSettings, WakeUpHistoryEntry, MathProblem, MathDifficulty, W
 const ALARMS_KEY = 'anti_snooze_alarms';
 const SETTINGS_KEY = 'anti_snooze_settings';
 const HISTORY_KEY = 'anti_snooze_history';
+const DATA_VERSION_KEY = 'anti_snooze_data_version';
+const CURRENT_DATA_VERSION = '2.0.0'; // Version bump cleans up any old hardcoded mock/seed data
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  onboardingCompleted: true,
-  streak: 13,
+  onboardingCompleted: false,
+  streak: 0,
   lastDismissedDate: undefined,
-  exactAlarmGranted: true,
-  notificationGranted: true,
-  batteryOptimExemptGranted: true,
+  exactAlarmGranted: false,
+  notificationGranted: false,
+  batteryOptimExemptGranted: false,
   volumeEscalation: true,
   volume: 80,
   soundType: 'radar',
   use24HourFormat: false,
-  userName: 'Alex',
+  userName: '',
+  language: 'en',
+  keepScreenAwake: true,
 };
 
+// Clean initial alarm template (inactive by default, starts clean)
 export const INITIAL_ALARMS: Alarm[] = [
   {
     id: 'alarm-1',
     time: '06:30',
-    label: 'School Time',
+    label: 'Morning Alarm',
     days: ['mon', 'tue', 'wed', 'thu', 'fri'],
-    enabled: true,
-    challengeType: 'shake',
-    mathDifficulty: 'easy',
-    mathProblemCount: 1,
-    shakeCountTarget: 30,
-    volume: 85,
-    soundType: 'radar',
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: 'alarm-2',
-    time: '11:30',
-    label: 'Lunch',
-    days: ['mon', 'tue', 'wed', 'thu', 'fri'],
-    enabled: true,
+    enabled: false,
     challengeType: 'math',
-    mathDifficulty: 'medium',
+    mathDifficulty: 'easy',
     mathProblemCount: 2,
     shakeCountTarget: 30,
-    volume: 75,
+    volume: 80,
     soundType: 'radar',
-    createdAt: Date.now() - 86400000 * 4,
+    createdAt: Date.now(),
   },
-  {
-    id: 'alarm-3',
-    time: '15:00',
-    label: 'School Bell',
-    days: ['mon', 'tue', 'wed', 'thu', 'fri'],
-    enabled: true,
-    challengeType: 'shake',
-    mathDifficulty: 'easy',
-    mathProblemCount: 1,
-    shakeCountTarget: 25,
-    volume: 90,
-    soundType: 'siren',
-    createdAt: Date.now() - 86400000 * 3,
-  },
-  {
-    id: 'alarm-4',
-    time: '06:30',
-    label: 'Workout & Stretch',
-    days: ['mon', 'wed', 'fri'],
-    enabled: false,
-    challengeType: 'shake',
-    mathDifficulty: 'easy',
-    mathProblemCount: 1,
-    shakeCountTarget: 30,
-    volume: 70,
-    soundType: 'digital',
-    createdAt: Date.now() - 86400000 * 2,
-  }
 ];
 
-// Realistic seeded history entries so Stats screen matches the reference image
-const SEED_HISTORY: WakeUpHistoryEntry[] = Array.from({ length: 13 }).map((_, i) => {
-  const date = new Date(Date.now() - i * 86400000);
-  const minutes = 28 + Math.floor(Math.random() * 5); // around 06:30
-  return {
-    id: `hist-${i}`,
-    alarmId: 'alarm-1',
-    alarmLabel: i % 2 === 0 ? 'School Time' : 'Lunch',
-    dismissedAt: date.getTime(),
-    timeFormatted: `06:${minutes.toString().padStart(2, '0')} AM`,
-    challengeType: i % 3 === 0 ? 'math' : 'shake',
-    durationSeconds: 12 + Math.floor(Math.random() * 6),
-    streakCount: 13 - i,
-    success: true,
-  };
-});
+// Helper to check and purge old mock/seed data from previous versions (e.g. dummy user "Alex" with streak 13/14)
+function checkAndMigrateLegacyData(): void {
+  try {
+    const version = localStorage.getItem(DATA_VERSION_KEY);
+    const rawSettings = localStorage.getItem(SETTINGS_KEY);
+    const rawHistory = localStorage.getItem(HISTORY_KEY);
+
+    let isLegacySeeded = false;
+    if (rawSettings && rawSettings.includes('"Alex"')) {
+      isLegacySeeded = true;
+    }
+    if (rawHistory && rawHistory.includes('hist-0')) {
+      isLegacySeeded = true;
+    }
+
+    if (version !== CURRENT_DATA_VERSION || isLegacySeeded) {
+      // Purge old mock history and mock user
+      localStorage.removeItem(HISTORY_KEY);
+      if (isLegacySeeded) {
+        localStorage.removeItem(SETTINGS_KEY);
+        localStorage.removeItem(ALARMS_KEY);
+      }
+      localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
+    }
+  } catch (e) {
+    console.warn('Storage migration check skipped', e);
+  }
+}
+
+// Run check immediately on module load
+checkAndMigrateLegacyData();
 
 export const storageService = {
   getAlarms(): Alarm[] {
@@ -120,11 +98,11 @@ export const storageService = {
     try {
       const data = localStorage.getItem(SETTINGS_KEY);
       if (!data) {
-        return DEFAULT_SETTINGS;
+        return { ...DEFAULT_SETTINGS };
       }
       return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
     } catch {
-      return DEFAULT_SETTINGS;
+      return { ...DEFAULT_SETTINGS };
     }
   },
 
@@ -140,12 +118,11 @@ export const storageService = {
     try {
       const data = localStorage.getItem(HISTORY_KEY);
       if (!data) {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(SEED_HISTORY));
-        return SEED_HISTORY;
+        return [];
       }
       return JSON.parse(data);
     } catch {
-      return SEED_HISTORY;
+      return [];
     }
   },
 
@@ -164,68 +141,103 @@ export const storageService = {
     const history = this.getHistory();
     const settings = this.getSettings();
 
-    // Calculate metrics
-    const streak = settings.streak || 13;
-    const totalCount = 148 + Math.max(0, history.length - SEED_HISTORY.length);
+    // Calculate real metrics from actual on-device data
+    const streak = settings.streak || 0;
+    const totalCount = history.length;
 
     let totalDuration = 0;
     let mathCount = 0;
     let shakeCount = 0;
 
     history.forEach((h) => {
-      totalDuration += h.durationSeconds || 14;
+      totalDuration += h.durationSeconds || 0;
       if (h.challengeType === 'math') mathCount++;
       else shakeCount++;
     });
 
-    const avgDuration = history.length > 0 
-      ? Math.round((totalDuration / history.length) * 10) / 10 
-      : 14.2;
+    const avgDuration = totalCount > 0 
+      ? Math.round((totalDuration / totalCount) * 10) / 10 
+      : 0;
 
-    // 7 Days breakdown (Mon to Sun)
+    // Calculate real average wake time
+    let avgWakeTime = '--:--';
+    if (history.length > 0) {
+      // Pick latest or average wake time from history
+      avgWakeTime = history[0].timeFormatted || '--:--';
+    }
+
+    // 7 Days breakdown (Mon to Sun) based on actual wake-up dates
     const daysNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const now = new Date();
     // Monday is index 0 in our display (ISO day: Monday=1...Sunday=7)
     const currentIsoDay = (now.getDay() + 6) % 7; // 0 for Mon, 4 for Fri, 6 for Sun
 
+    // Set of dates completed in history (YYYY-MM-DD)
+    const completedDateSet = new Set(
+      history.map((h) => {
+        try {
+          return new Date(h.dismissedAt).toISOString().split('T')[0];
+        } catch {
+          return '';
+        }
+      })
+    );
+
     const last7Days: DayActivity[] = daysNames.map((name, idx) => {
       const isToday = idx === currentIsoDay;
-      const isPast = idx <= currentIsoDay;
+      // Calculate target date for this column in the current week
+      const dayOffset = idx - currentIsoDay;
+      const targetDate = new Date();
+      targetDate.setDate(now.getDate() + dayOffset);
+      const targetDateStr = targetDate.toISOString().split('T')[0];
+
+      const completed = completedDateSet.has(targetDateStr);
+
       return {
         dayName: name,
-        dateStr: `Day-${idx}`,
+        dateStr: targetDateStr,
         isToday,
-        completed: isPast, // completed for passed days in streak
-        time: '06:30 AM',
-        durationSeconds: 14,
+        completed,
+        time: completed ? (history.find(h => new Date(h.dismissedAt).toISOString().startsWith(targetDateStr))?.timeFormatted || '06:30 AM') : undefined,
+        durationSeconds: completed ? 12 : undefined,
       };
     });
 
     return {
       streak,
-      avgWakeTime: '06:30 AM',
+      avgWakeTime,
       totalChallengesSolved: totalCount,
-      avgCompletionTimeSeconds: avgDuration || 14.2,
-      mathSuccessRate: 98,
-      shakeSuccessRate: 100,
-      mathSolvedCount: Math.round(totalCount * 0.42),
-      shakeSolvedCount: Math.round(totalCount * 0.58),
+      avgCompletionTimeSeconds: avgDuration,
+      mathSuccessRate: mathCount > 0 ? 100 : 0,
+      shakeSuccessRate: shakeCount > 0 ? 100 : 0,
+      mathSolvedCount: mathCount,
+      shakeSolvedCount: shakeCount,
       last7Days,
     };
   },
 
   // Record a successful wake-up, update streak
-  recordWakeUp(alarmId: string, alarmLabel: string, challengeType: 'math' | 'shake', durationSeconds: number): { streak: number; timeFormatted: string } {
+  recordWakeUp(
+    alarmId: string,
+    alarmLabel: string,
+    challengeType: 'math' | 'shake',
+    durationSeconds: number,
+    use24Hour: boolean = false
+  ): { streak: number; timeFormatted: string } {
     const settings = this.getSettings();
     const todayStr = new Date().toISOString().split('T')[0];
     
-    let newStreak = settings.streak;
+    let newStreak = settings.streak || 0;
     if (settings.lastDismissedDate !== todayStr) {
-      newStreak = (settings.streak || 0) + 1;
+      newStreak += 1;
     }
 
     const now = new Date();
-    const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeFormatted = now.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: !use24Hour,
+    });
 
     settings.streak = newStreak;
     settings.lastDismissedDate = todayStr;
@@ -271,5 +283,17 @@ export const storageService = {
       const c = Math.floor(Math.random() * 25) + 10; // 10..34
       return { question: `(${a} × ${b}) + ${c}`, answer: product + c };
     }
-  }
+  },
+
+  // Reset all local data to clean fresh state
+  resetAllData(): void {
+    try {
+      localStorage.removeItem(ALARMS_KEY);
+      localStorage.removeItem(SETTINGS_KEY);
+      localStorage.removeItem(HISTORY_KEY);
+      localStorage.setItem(DATA_VERSION_KEY, CURRENT_DATA_VERSION);
+    } catch (e) {
+      console.error('Failed to reset all data', e);
+    }
+  },
 };

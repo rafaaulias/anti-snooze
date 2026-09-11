@@ -1,48 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { Alarm } from '../types';
 import { BellRing, ArrowRight } from 'lucide-react';
+import { AppLanguage, formatTimeString, t } from '../services/i18n';
 
 interface RingingScreenProps {
   alarm: Alarm;
   onStartChallenge: () => void;
+  use24HourFormat?: boolean;
+  language?: AppLanguage;
 }
 
 export const RingingScreen: React.FC<RingingScreenProps> = ({
   alarm,
   onStartChallenge,
+  use24HourFormat = false,
+  language = 'en',
 }) => {
-  const [currentTime, setCurrentTime] = useState<string>('');
-  const [blink, setBlink] = useState(true);
+  const [currentTimeFormatted, setCurrentTimeFormatted] = useState<string>('');
+  const [period, setPeriod] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const h = now.getHours();
-      const m = now.getMinutes();
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      const period = h >= 12 ? 'PM' : 'AM';
-      setCurrentTime(`${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${period}`);
+      const hStr = now.getHours().toString().padStart(2, '0');
+      const mStr = now.getMinutes().toString().padStart(2, '0');
+      const res = formatTimeString(`${hStr}:${mStr}`, use24HourFormat);
+      setCurrentTimeFormatted(res.timeFormatted);
+      setPeriod(res.period);
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
-    const blinkTimer = setInterval(() => setBlink((b) => !b), 600);
-    return () => {
-      clearInterval(timer);
-      clearInterval(blinkTimer);
-    };
-  }, []);
+    return () => clearInterval(timer);
+  }, [use24HourFormat]);
 
   return (
-    <div 
+    <div
       id="screen-alarm-ringing"
-      className="fixed inset-0 z-50 bg-[#000000] text-white flex flex-col items-center justify-between p-8 select-none"
+      className="fixed inset-0 z-50 bg-[#000000] text-white flex flex-col items-center justify-between p-6 sm:p-8 select-none"
     >
       {/* Top Status */}
       <div className="w-full flex items-center justify-between pt-4">
         <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 border border-white/15">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
           <span className="text-[11px] font-bold tracking-wider uppercase text-white/90">
-            ALARM RINGING
+            {t('alarmRinging', language)}
           </span>
         </div>
         <span className="text-xs font-mono text-white/60">
@@ -64,22 +65,24 @@ export const RingingScreen: React.FC<RingingScreenProps> = ({
         {/* Current Time Display */}
         <div className="text-center">
           <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tighter text-white font-mono">
-            {currentTime.split(' ')[0]}
+            {currentTimeFormatted}
           </h1>
-          <p className="text-lg font-bold text-white/70 uppercase tracking-widest mt-1">
-            {currentTime.split(' ')[1]}
-          </p>
+          {period && (
+            <p className="text-lg font-bold text-white/70 uppercase tracking-widest mt-1">
+              {period}
+            </p>
+          )}
         </div>
 
         {/* Alarm Label */}
         <div className="mt-6 text-center max-w-xs">
           <h3 className="text-xl font-bold text-white tracking-tight">
-            {alarm.label || 'Wake-up Call'}
+            {alarm.label || t('alarms', language)}
           </h3>
           <p className="text-xs text-white/60 mt-1">
-            {alarm.challengeType === 'math' 
-              ? 'Complete the math arithmetic challenge to silence this alarm'
-              : 'Complete physical phone shake challenge to silence this alarm'}
+            {alarm.challengeType === 'math'
+              ? t('mathDesc', language)
+              : t('shakeDesc', language)}
           </p>
         </div>
 
@@ -91,14 +94,14 @@ export const RingingScreen: React.FC<RingingScreenProps> = ({
         </div>
       </div>
 
-      {/* Bottom: ONLY ONE BUTTON: "Start challenge" (Strictly no snooze or dismiss shortcut!) */}
+      {/* Bottom: ONLY ONE BUTTON: "Start challenge" */}
       <div className="w-full max-w-sm pb-6">
         <button
           id="btn-start-challenge"
           onClick={onStartChallenge}
-          className="w-full h-14 rounded-[16px] bg-white text-black font-extrabold text-base tracking-wide flex items-center justify-center space-x-2.5 hover:bg-[#F0F0F0] active:scale-[0.98] transition-all shadow-xl"
+          className="w-full h-14 rounded-[16px] bg-white text-black font-extrabold text-base tracking-wide flex items-center justify-center space-x-2.5 hover:bg-[#F0F0F0] active:scale-[0.98] transition-all shadow-xl cursor-pointer"
         >
-          <span>Start challenge</span>
+          <span>{t('startChallenge', language)}</span>
           <ArrowRight className="w-5 h-5 text-black" />
         </button>
       </div>
