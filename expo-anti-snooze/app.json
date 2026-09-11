@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Anti-Snooze",
+    "slug": "anti-snooze",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.antisnooze.alarm",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio",
+          "fetch"
+        ],
+        "NSMotionUsageDescription": "Anti-Snooze needs access to the accelerometer to verify physical phone shaking to silence alarms."
+      }
+    },
+    "android": {
+      "package": "com.antisnooze.alarm",
+      "adaptiveIcon": {
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "SYSTEM_ALERT_WINDOW"
+      ]
+    }
+  }
+}
